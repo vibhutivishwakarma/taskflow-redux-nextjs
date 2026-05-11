@@ -1,65 +1,89 @@
-import Image from "next/image";
+'use client';
+import { addTask, deleteTask, toggleTask } from "@/redux/features/taskSlice";
+import { useGetTasksQuery } from "@/redux/taskApi";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function Home() {
+
+  const [task, setTask] = useState('');
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all');
+  const {
+  data,
+  isLoading,
+  error,
+} = useGetTasksQuery('');
+
+  const dispatch = useDispatch()
+
+  const reduxTasks = useSelector(
+    (state: any) => state.tasks.tasks
+  )
+  const tasks = [...(data || []), ...reduxTasks];
+  const handleAddTask = () => {
+    if (!task.trim()) return;
+    dispatch(addTask(task))
+    setTask('')
+  }
+
+  const filteredTask = tasks.filter((item:any)=>{
+    const matchedTask = item.title.toLowerCase().includes(search.toLowerCase())
+
+    if(filter === 'completed'){
+      return item.completed && matchedTask
+    }
+    if(filter === 'pending'){
+      return !item.completed && matchedTask
+    }
+    return matchedTask
+  })
+  
+  if (isLoading) {
+    return <h1>Loading...</h1>;
+  }
+  if (error) {
+  return <h1>Something went wrong</h1>;
+}
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen flex flex-col items-center justify-center bg-pink-50">
+      <h1 className="text-4xl font-bold mb-6">
+        TaskFlow
+      </h1>
+      <div className="flex gap-3 mb-6">
+        <input type="text" placeholder="Enter Task" value={task} onChange={(e) => setTask(e.target.value)}
+          className="w-80 border p-3 rounded-full" />
+        <button onClick={handleAddTask} className="bg-black text-white px-4 py-2 rounded-full">Add Task</button>
+      </div>
+        <input
+          type="text"
+          placeholder="Search Task"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border p-2 rounded-full w-40 bg-white mb-5"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <div className="flex gap-3 mb-3">
+          <button className="bg-gray-300 px-2 py-1 rounded-full" onClick={()=> setFilter('all')}> All</button>
+          <button className="bg-gray-300 px-2 py-1 rounded-full" onClick={()=> setFilter('completed')}> Completed</button>
+          <button className="bg-gray-300 px-2 py-1 rounded-full" onClick={()=> setFilter('pending')}> Pending</button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+      <div>
+        {filteredTask.map((item: any) => (
+          <div key={item.id} className="flex items-center gap-3 mb-3">
+            <input type="checkbox" checked={item.completed} onChange={() => dispatch(toggleTask(item.id))} />
+
+            <p className={
+              item.completed
+                ? 'line-through'
+                : ''
+            }>{item.title}</p>
+
+            <button className="bg-red-400 text-white px-2 rounded" onClick={() => dispatch(deleteTask(item.id))}>Delete</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
